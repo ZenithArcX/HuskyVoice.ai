@@ -279,7 +279,7 @@ async def cancel_leave(
             detail="Leave application not found"
         )
 
-    if leave["user_id"] != current_user["id"]:
+    if leave["user_id"] != current_user["sub"]:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="You can only cancel your own leave applications"
