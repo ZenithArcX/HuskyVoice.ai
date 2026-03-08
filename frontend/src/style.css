@@ -1,0 +1,14 @@
+/* src/style.css — Global CSS entry point */
+
+/*
+  These three @tailwind directives inject Tailwind's styles.
+  
+  @tailwind base      → normalizes browser default styles (like a CSS reset)
+  @tailwind components → component classes (can be used with @apply)
+  @tailwind utilities  → all the utility classes: p-4, text-blue-500, flex, etc.
+  
+  This file is imported in main.js to apply Tailwind globally.
+*/
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
