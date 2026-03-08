@@ -239,3 +239,58 @@ async def update_leave_status(
     return {
         "message": f"Leave application {data.status.lower()} successfully"
     }
+
+
+@router.delete(
+    "/{leave_id}",
+    summary="Employee cancels their own pending leave"
+)
+async def cancel_leave(
+    leave_id: str,
+    current_user: dict = Depends(require_employee)
+):
+    """
+    Cancel a pending leave application.
+
+    Only the employee who submitted the leave can cancel it,
+    and only while the status is still 'Pending'.
+
+    Error cases:
+    - 400 → invalid leave ID format
+    - 403 → trying to cancel someone else's leave
+    - 409 → leave is already Approved or Rejected (can't cancel)
+    - 404 → leave not found
+    """
+    db = get_db()
+
+    try:
+        object_id = ObjectId(leave_id)
+    except InvalidId:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid leave ID format"
+        )
+
+    leave = await db["leaves"].find_one({"_id": object_id})
+
+    if not leave:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Leave application not found"
+        )
+
+    if leave["user_id"] != current_user["id"]:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You can only cancel your own leave applications"
+        )
+
+    if leave["status"] != "Pending":
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"Cannot cancel a leave that is already {leave['status']}"
+        )
+
+    await db["leaves"].delete_one({"_id": object_id})
+
+    return {"message": "Leave application cancelled successfully"}

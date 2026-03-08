@@ -72,3 +72,18 @@ export async function updateLeaveStatus(leaveId, statusData) {
   const response = await api.patch(`/api/leave/${leaveId}/status`, statusData)
   return response.data
 }
+
+/**
+ * cancelLeave — Employee cancels their own pending leave
+ *
+ * DELETE /api/leave/{leaveId}
+ * Requires: employee role, leave must be Pending
+ *
+ * @param {string} leaveId - MongoDB ObjectId string of the leave document
+ * @returns {object} - { message: "Leave application cancelled successfully" }
+ * @throws {AxiosError} - 403 if not owner, 409 if already reviewed, 404 if not found
+ */
+export async function cancelLeave(leaveId) {
+  const response = await api.delete(`/api/leave/${leaveId}`)
+  return response.data
+}

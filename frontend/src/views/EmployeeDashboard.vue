@@ -80,6 +80,41 @@
         <p class="text-xs text-gray-400 mt-2">
           Submitted: {{ formatDate(leave.created_at) }}
         </p>
+
+        <!-- Cancel button — only shown for Pending leaves -->
+        <div v-if="leave.status === 'Pending'" class="mt-3 flex justify-end">
+          <button
+            @click="confirmCancel(leave)"
+            class="text-sm text-red-500 border border-red-300 px-3 py-1 rounded-lg hover:bg-red-50 transition"
+          >
+            ✕ Cancel Request
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Cancel confirmation modal -->
+    <div v-if="cancelModal.show" class="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+      <div class="bg-white rounded-2xl shadow-xl p-6 w-full max-w-sm mx-4">
+        <h3 class="text-lg font-bold text-gray-800 mb-2">Cancel Leave Request?</h3>
+        <p class="text-sm text-gray-600 mb-1">
+          <span class="font-medium">{{ cancelModal.leave?.leave_type }}</span>
+        </p>
+        <p class="text-sm text-gray-500 mb-4">
+          {{ formatDate(cancelModal.leave?.start_date) }} → {{ formatDate(cancelModal.leave?.end_date) }}
+        </p>
+        <p class="text-red-500 text-sm mb-4" v-if="cancelModal.error">{{ cancelModal.error }}</p>
+        <div class="flex gap-3">
+          <button
+            @click="cancelModal.show = false"
+            class="flex-1 border border-gray-300 text-gray-700 py-2 rounded-lg hover:bg-gray-50 transition"
+          >Keep It</button>
+          <button
+            @click="doCancel"
+            :disabled="cancelModal.loading"
+            class="flex-1 bg-red-500 text-white py-2 rounded-lg hover:bg-red-600 transition disabled:opacity-50"
+          >{{ cancelModal.loading ? 'Cancelling...' : 'Yes, Cancel' }}</button>
+        </div>
       </div>
     </div>
 
@@ -87,8 +122,8 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
-import { getMyLeaves } from '@/api/leave'
+import { ref, reactive, onMounted } from 'vue'
+import { getMyLeaves, cancelLeave } from '@/api/leave'
 
 // leaves holds the array of leave objects from the API
 const leaves = ref([])
@@ -156,6 +191,36 @@ function borderColor(status) {
     'Rejected': 'border-red-500'
   }
   return map[status] || 'border-gray-300'
+}
+
+// Cancel modal state
+const cancelModal = reactive({
+  show: false,
+  leave: null,
+  loading: false,
+  error: ''
+})
+
+function confirmCancel(leave) {
+  cancelModal.leave = leave
+  cancelModal.error = ''
+  cancelModal.loading = false
+  cancelModal.show = true
+}
+
+async function doCancel() {
+  cancelModal.loading = true
+  cancelModal.error = ''
+  try {
+    await cancelLeave(cancelModal.leave.id)
+    cancelModal.show = false
+    // Remove the cancelled leave from the local list immediately
+    leaves.value = leaves.value.filter(l => l.id !== cancelModal.leave.id)
+  } catch (err) {
+    cancelModal.error = err.response?.data?.detail || 'Failed to cancel. Please try again.'
+  } finally {
+    cancelModal.loading = false
+  }
 }
 
 // onMounted runs after the component is rendered in the DOM.
